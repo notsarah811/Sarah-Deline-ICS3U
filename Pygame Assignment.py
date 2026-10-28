@@ -19,7 +19,7 @@ RED = (255, 0, 0)
 GREEN = (0, 200, 0)
 BLACK = (0, 0, 0)
 
-#test
+
 player_size = 25
 player_x = 587
 player_y = 387
@@ -32,7 +32,14 @@ enemy_speed = 1.5
 score = 0
 cont = False
 
+v = pygame.draw.polygon((200, 0), (500,0), (500, 50), (250, 50), (250, 300), (200, 300))
 
+cacti_borders = [
+    pygame.polygon((200, 0), (500,0), (500, 50), (250, 50), (250, 300), (200, 300)),
+    pygame.polygon((1000, 0), (700,0), (700, 50), (950, 50), (950, 300), (1000, 300)),
+    pygame.polygon((200, 800), (500,800), (500, 750), (250, 750), (250, 500), (200, 500)),
+    pygame.polygon((1000, 800), (700,800), (700, 750), (950, 750), (950, 500), (1000, 500))]
+    
 
 bullets = []
 
@@ -47,11 +54,29 @@ won = False
 lvl_2_won = False
 clock = pygame.time.Clock()
 
+#===========FUNCTION SETUP===========
 
+def enemy_movement ():
+    for enemy in enemies:
+                enemy_x = enemy[0]
+                enemy_y = enemy[1]
+    
+                if enemy_x < player_x:
+                    enemy[0] += enemy_speed
+                elif enemy_x > player_x:
+                    enemy[0] -= enemy_speed
+    
+                if enemy_y < player_y:
+                    enemy[1] += enemy_speed
+                elif enemy_y > player_y:
+                    enemy[1] -= enemy_speed
+
+def enemy_shooting ():
+    pass
+    
 
 #==========GAME LOOP================
 while running:
-    
     # Check for events
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -113,10 +138,8 @@ while running:
     left_border = pygame.draw.rect(screen, BLACK, (0, 0, 200, 10000))
     right_border = pygame.draw.rect(screen, BLACK, (SCREEN_WIDTH - 200, 0, 200, 10000))
     if not won:
-        cacti_border_tl = pygame.draw.polygon(screen, GREEN, [(200, 0), (500,0), (500, 50), (250, 50), (250, 300), (200, 300)])
-        cacti_border_tr = pygame.draw.polygon(screen, GREEN, [(1000, 0), (700,0), (700, 50), (950, 50), (950, 300), (1000, 300)])
-        cacti_border_bl = pygame.draw.polygon(screen, GREEN, [(200, 800), (500,800), (500, 750), (250, 750), (250, 500), (200, 500)])
-        cacti_border_br = pygame.draw.polygon(screen, GREEN, [(1000, 800), (700,800), (700, 750), (950, 750), (950, 500), (1000, 500)])
+        for cacti in cacti_borders:
+            pygame.draw.Polygon(screen, GREEN, cacti)
 
     font = pygame.font.Font(None, 50)
     text_score = font.render(f"Score = {score}", True, WHITE)
@@ -228,19 +251,7 @@ while running:
             enemy_y = random.randint(0, SCREEN_HEIGHT - 30)  # Enemy height is 30
             enemies.append([enemy_x, enemy_y])
 
-        for enemy in enemies:
-            enemy_x = enemy[0]
-            enemy_y = enemy[1]
-
-            if enemy_x < player_x:
-                enemy[0] += enemy_speed
-            elif enemy_x > player_x:
-                enemy[0] -= enemy_speed
-
-            if enemy_y < player_y:
-                enemy[1] += enemy_speed
-            elif enemy_y > player_y:
-                enemy[1] -= enemy_speed
+        enemy_movement ()
 
             
         for enemy in enemies:
@@ -275,27 +286,27 @@ while running:
             player_y = 387
 
     if not lvl_2_won:
-        # Move left
-        if keys[pygame.K_a]:
-            player_x -= speed
-            player = pygame.Rect(player_x, player_y, player_size, player_size)
-            
-
-        # Move right
-        if keys[pygame.K_d]:
-            player_x += speed
-            player = pygame.Rect(player_x, player_y, player_size, player_size)
-            
-        # Move up
-        if keys[pygame.K_w]:
-            player_y -= speed
-            player = pygame.Rect(player_x, player_y, player_size, player_size)
-            
+            # Move left
+            if keys[pygame.K_a]:
+                player_x -= speed
+                player = pygame.Rect(player_x, player_y, player_size, player_size)
                 
-        # Move down
-        if keys[pygame.K_s]:
-            player_y += speed
-            player = pygame.Rect(player_x, player_y, player_size, player_size)
+    
+            # Move right
+            if keys[pygame.K_d]:
+                player_x += speed
+                player = pygame.Rect(player_x, player_y, player_size, player_size)
+                
+            # Move up
+            if keys[pygame.K_w]:
+                player_y -= speed
+                player = pygame.Rect(player_x, player_y, player_size, player_size)
+                
+                    
+            # Move down
+            if keys[pygame.K_s]:
+                player_y += speed
+                player = pygame.Rect(player_x, player_y, player_size, player_size)
 
     if won == True and not lvl_2_won:
         cacti_border_tl = pygame.draw.polygon(screen, GREEN, [(200, 0), (500,0), (500, 50), (250, 50), (250, 300), (200, 300)])
@@ -306,6 +317,30 @@ while running:
         cacti_border_ctr = pygame.draw.rect(screen, GREEN, (720, 200, 80, 80))
         cacti_border_cbl = pygame.draw.rect(screen, GREEN, (400, 520, 80, 80))
         cacti_border_cbr = pygame.draw.rect(screen, GREEN, (720, 520, 80, 80))
+
+    if won == True and cont == True and not lvl_2_won:
+        random_enemy_spawn_chance = 0.01  # 1% chance to spawn an enemy each frame
+        if random.random() < random_enemy_spawn_chance and len(enemies) < 5:  # Limit the number of enemies on screen
+            enemy_x = random.randint(200, SCREEN_WIDTH - 200 - 30)  # Enemy width is 30
+            enemy_y = random.randint(0, SCREEN_HEIGHT - 30)  # Enemy height is 30
+            enemies.append([enemy_x, enemy_y])
+    
+        enemy_movement ()
+    
+                
+        for enemy in enemies:
+            enemy_rect = pygame.Rect(enemy[0], enemy[1], 30, 30)
+    
+            for bullet in bullets:
+                bullet_rect = pygame.Rect(bullet[0], bullet[1], 15, 15)
+    
+                if bullet_rect.colliderect(enemy_rect):
+                    enemies.remove(enemy)
+                    bullets.remove(bullet)
+                    score += 1
+                        
+            pygame.draw.rect(screen, BLACK, (enemy[0], enemy[1], 30, 30))    
+
 
     # Update the display
     pygame.display.flip()
