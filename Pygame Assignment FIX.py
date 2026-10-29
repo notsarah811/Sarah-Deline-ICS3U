@@ -41,7 +41,13 @@ cacti_borders = [
     [(200, 800), (500, 800), (500, 750), (250, 750), (250, 500), (200, 500)],
     [(1000, 800), (700, 800), (700, 750), (950, 750), (950, 500), (1000, 500)],
 ]
-    
+
+cacti_pillars = [
+    (400, 200, 80, 80),
+    (720, 200, 80, 80),
+    (400, 520, 80, 80),
+    (720, 520, 80, 80)
+]
 
 bullets = []
 
@@ -311,14 +317,17 @@ while running:
                 player = pygame.Rect(player_x, player_y, player_size, player_size)
 
     if won == True and not lvl_2_won:
-        cacti_border_tl = pygame.draw.polygon(screen, GREEN, [(200, 0), (500,0), (500, 50), (250, 50), (250, 300), (200, 300)])
-        cacti_border_tr = pygame.draw.polygon(screen, GREEN, [(1000, 0), (700,0), (700, 50), (950, 50), (950, 300), (1000, 300)])
-        cacti_border_bl = pygame.draw.polygon(screen, GREEN, [(200, 800), (500,800), (500, 750), (250, 750), (250, 500), (200, 500)])
-        cacti_border_br = pygame.draw.polygon(screen, GREEN, [(1000, 800), (700,800), (700, 750), (950, 750), (950, 500), (1000, 500)])
-        cacti_border_ctl = pygame.draw.rect(screen, GREEN, (400, 200, 80, 80))
-        cacti_border_ctr = pygame.draw.rect(screen, GREEN, (720, 200, 80, 80))
-        cacti_border_cbl = pygame.draw.rect(screen, GREEN, (400, 520, 80, 80))
-        cacti_border_cbr = pygame.draw.rect(screen, GREEN, (720, 520, 80, 80))
+        for cacti in cacti_borders:
+            pygame.draw.polygon(screen, GREEN, cacti)
+        # Replace line 323 with a loop:
+        for cactus in cacti_pillars:
+            pygame.draw.rect(screen, GREEN, cactus)
+        
+        
+        #cacti_border_ctl = pygame.draw.rect(screen, GREEN, (400, 200, 80, 80))
+        #cacti_border_ctr = pygame.draw.rect(screen, GREEN, (720, 200, 80, 80))
+        #cacti_border_cbl = pygame.draw.rect(screen, GREEN, (400, 520, 80, 80))
+        #cacti_border_cbr = pygame.draw.rect(screen, GREEN, (720, 520, 80, 80))
 
     if won == True and cont == True and not lvl_2_won:
         random_enemy_spawn_chance = 0.01  # 1% chance to spawn an enemy each frame
