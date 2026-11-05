@@ -19,7 +19,6 @@ RED = (255, 0, 0)
 GREEN = (0, 200, 0)
 BLACK = (0, 0, 0)
 
-
 player_size = 25
 player_x = 587
 player_y = 387
@@ -30,16 +29,20 @@ bullet_cooldown = 300  # Time between shots in milliseconds
 last_bullet_time = 0
 enemy_speed = 1.5
 score = 0
+lives = 3
 cont = False
 
 v = pygame.draw.polygon(screen, (255, 0, 0), [(200, 0), (500, 0), (500, 50), (250, 50)], 250)
 
-
 cacti_borders = [
-    [(200, 0), (500, 0), (500, 50), (250, 50), (250, 300), (200, 300)],
-    [(1000, 0), (700, 0), (700, 50), (950, 50), (950, 300), (1000, 300)],
-    [(200, 800), (500, 800), (500, 750), (250, 750), (250, 500), (200, 500)],
-    [(1000, 800), (700, 800), (700, 750), (950, 750), (950, 500), (1000, 500)],
+    (200, 0, 300, 50),
+    (200, 0, 50, 300),
+    (700, 0 , 300, 50),
+    (950, 50, 50, 250),
+    (200, 750, 300, 50),
+    (200, 500, 50, 300),
+    (700, 750, 300, 50),
+    (950, 500, 50, 300)
 ]
 
 cacti_pillars = [
@@ -82,6 +85,25 @@ def enemy_movement ():
 def enemy_shooting ():
     pass
     
+def check_cacti_collision(player, cacti_borders):
+        for cacti in cacti_borders:
+            if player.colliderect(cacti):
+                return True
+        return False
+
+def check_border_collision(player, left_border, right_border):
+    if player.colliderect(left_border or right_border):
+                return True
+    return False
+
+def lose_life():
+        lives -= 1
+        player_x = 587
+        player_y = 387
+        bullets.clear()
+        enemies.clear()
+        
+
 
 #==========GAME LOOP================
 while running:
@@ -102,31 +124,47 @@ while running:
         if keys[pygame.K_a]:
             player_x -= speed
             player = pygame.Rect(player_x, player_y, player_size, player_size)
+            if check_cacti_collision(player, cacti_borders) == True:
+                lose_life()
+            if check_border_collision(player, left_border, right_border) == True:
+                player_x += speed
             
 
         # Move right
         if keys[pygame.K_d]:
             player_x += speed
             player = pygame.Rect(player_x, player_y, player_size, player_size)
+            if check_cacti_collision(player, cacti_borders) == True:
+                lose_life()
+            if check_border_collision(player, left_border, right_border) == True:
+                player_x -= (speed)
             
         # Move up
         if keys[pygame.K_w]:
             player_y -= speed
             player = pygame.Rect(player_x, player_y, player_size, player_size)
-            
+            if check_cacti_collision(player, cacti_borders) == True:
+                lose_life()
+            if check_border_collision(player, left_border, right_border) == True:
+                player_y += (speed)
+                        
                 
         # Move down
         if keys[pygame.K_s]:
             player_y += speed
             player = pygame.Rect(player_x, player_y, player_size, player_size)
-            
+            if check_cacti_collision(player, cacti_borders) == True:
+                lose_life()
+            if check_border_collision(player, left_border, right_border) == True:
+                player_y -= (speed)
+                        
    
    # Keep the player within the screen boundaries
-    if player_x < 0:
-        player_x = 0
+    if player_x < 200:
+        player_x = 200
 
-    if player_x > SCREEN_WIDTH - player_size:
-        player_x = SCREEN_WIDTH - player_size
+    if player_x > 1000 - player_size:
+        player_x = 1000 - player_size
 
     if player_y < 0:
         player_y = 0
@@ -138,6 +176,12 @@ while running:
     player = pygame.Rect(player_x, player_y, player_size, player_size)
 
     
+
+
+
+
+
+    
     # Draw the background
     screen.fill(SAND)
 
@@ -147,11 +191,15 @@ while running:
     right_border = pygame.draw.rect(screen, BLACK, (SCREEN_WIDTH - 200, 0, 200, 10000))
     if not won:
         for cacti in cacti_borders:
-            pygame.draw.polygon(screen, GREEN, cacti)
+            pygame.draw.rect(screen, GREEN, cacti)
 
     font = pygame.font.Font(None, 50)
     text_score = font.render(f"Score = {score}", True, WHITE)
     screen.blit(text_score, (20, 20))
+
+    font = pygame.font.Font(None, 50)
+    text_score = font.render(f"Lives = {lives}", True, WHITE)
+    screen.blit(text_score, (20, 100))
 
     player = pygame.Rect(player_x, player_y, player_size, player_size)
     pygame.draw.rect(screen, RED, player)
