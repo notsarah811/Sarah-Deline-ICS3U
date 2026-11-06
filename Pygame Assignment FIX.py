@@ -476,6 +476,6 @@ while running:
 
     # Limit the game to 60 FPS
     clock.tick(60)
-
+#
 # Close Pygame
 pygame.quit()
