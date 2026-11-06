@@ -1,3 +1,5 @@
+import re
+
 import pygame # type: ignore
 import random
 
@@ -19,7 +21,8 @@ RED = (255, 0, 0)
 GREEN = (0, 200, 0)
 BLACK = (0, 0, 0)
 
-player_size = 25
+player_size = 50
+enemy_size = 30
 player_x = 587
 player_y = 387
 speed = 5
@@ -27,7 +30,7 @@ bullet_speed = 10
 bullet_active = False
 bullet_cooldown = 300  # Time between shots in milliseconds
 last_bullet_time = 0
-enemy_speed = 1.5
+enemy_speed = 2.5
 score = 0
 lives = 3
 cont = False
@@ -55,7 +58,12 @@ cacti_pillars = [
 bullets = []
 
 enemies = []
-
+enemy_spawn_locations = [
+    (200, 400),
+    (600, 0),
+    (970, 400),
+    (600, 770)
+]
 
 walls = 0
 
@@ -68,19 +76,32 @@ clock = pygame.time.Clock()
 #===========FUNCTION SETUP===========
 
 def enemy_movement ():
-    for enemy in enemies:
-                enemy_x = enemy[0]
-                enemy_y = enemy[1]
-    
-                if enemy_x < player_x:
-                    enemy[0] += enemy_speed
-                elif enemy_x > player_x:
-                    enemy[0] -= enemy_speed
-    
-                if enemy_y < player_y:
-                    enemy[1] += enemy_speed
-                elif enemy_y > player_y:
-                    enemy[1] -= enemy_speed
+     for enemy in enemies:
+
+        enemy_x = enemy[0]
+        enemy_y = enemy[1]
+
+        # Move horizontally
+        if enemy_x < player_x:
+            enemy[0] += enemy_speed
+        elif enemy_x > player_x:
+            enemy[0] -= enemy_speed
+
+        if enemy_border_collision(enemy, cacti_borders):
+            enemy[0] = enemy_x
+
+        # Update enemy position
+        enemy_x = enemy[0]
+        enemy_y = enemy[1]
+
+        # Move vertically
+        if enemy_y < player_y:
+            enemy[1] += enemy_speed
+        elif enemy_y > player_y:
+            enemy[1] -= enemy_speed
+
+        if enemy_border_collision(enemy, cacti_borders):
+            enemy[1] = enemy_y
 
 def enemy_shooting ():
     pass
@@ -91,19 +112,31 @@ def check_cacti_collision(player, cacti_borders):
                 return True
         return False
 
+def enemy_border_collision(enemy, cacti_borders):
+    for cacti in cacti_borders:
+        enemy_rect = pygame.Rect(enemy[0], enemy[1], 30, 30)
+        if enemy_rect.colliderect(cacti):
+            return True
+    return False
+
 def check_border_collision(player, left_border, right_border):
     if player.colliderect(left_border or right_border):
                 return True
     return False
 
-def lose_life():
-        lives -= 1
+def lose_life(player_x, player_y, lives,bullets, enemies):
         player_x = 587
         player_y = 387
         bullets.clear()
         enemies.clear()
-        
+        return player_x, player_y, lives - 1
 
+def enemy_collision(player, enemies):
+    for enemy in enemies:
+        enemy_rect = pygame.Rect(enemy[0], enemy[1], 30, 30)
+        if player.colliderect(enemy_rect):
+            return True
+    return False
 
 #==========GAME LOOP================
 while running:
@@ -125,7 +158,7 @@ while running:
             player_x -= speed
             player = pygame.Rect(player_x, player_y, player_size, player_size)
             if check_cacti_collision(player, cacti_borders) == True:
-                lose_life()
+                player_x, player_y,lives = lose_life(player_x,player_y,lives,bullets, enemies)
             if check_border_collision(player, left_border, right_border) == True:
                 player_x += speed
             
@@ -135,7 +168,7 @@ while running:
             player_x += speed
             player = pygame.Rect(player_x, player_y, player_size, player_size)
             if check_cacti_collision(player, cacti_borders) == True:
-                lose_life()
+                player_x, player_y,lives = lose_life(player_x,player_y,lives,bullets, enemies)
             if check_border_collision(player, left_border, right_border) == True:
                 player_x -= (speed)
             
@@ -144,7 +177,7 @@ while running:
             player_y -= speed
             player = pygame.Rect(player_x, player_y, player_size, player_size)
             if check_cacti_collision(player, cacti_borders) == True:
-                lose_life()
+                player_x, player_y,lives = lose_life(player_x,player_y,lives,bullets, enemies)
             if check_border_collision(player, left_border, right_border) == True:
                 player_y += (speed)
                         
@@ -154,7 +187,7 @@ while running:
             player_y += speed
             player = pygame.Rect(player_x, player_y, player_size, player_size)
             if check_cacti_collision(player, cacti_borders) == True:
-                lose_life()
+                player_x, player_y,lives = lose_life(player_x,player_y,lives,bullets, enemies)
             if check_border_collision(player, left_border, right_border) == True:
                 player_y -= (speed)
                         
@@ -175,7 +208,10 @@ while running:
         # Update the player rectangle
     player = pygame.Rect(player_x, player_y, player_size, player_size)
 
-    
+    player_image = pygame.image.load("temp sprite.jpeg")
+    enemy_image = pygame.image.load("temp sprite.jpeg")
+    player_image = pygame.transform.scale(player_image, (player_size, player_size))
+    enemy_image = pygame.transform.scale(enemy_image, (enemy_size, enemy_size))
 
 
 
@@ -202,7 +238,7 @@ while running:
     screen.blit(text_score, (20, 100))
 
     player = pygame.Rect(player_x, player_y, player_size, player_size)
-    pygame.draw.rect(screen, RED, player)
+    screen.blit(player_image, (player_x, player_y))
 
     #==========SHOOTING SECTION================
     current_time = pygame.time.get_ticks()
@@ -301,10 +337,11 @@ while running:
     # Enemy movement and behavior can be added here
 
     if not won:
-        random_enemy_spawn_chance = 0.01  # 1% chance to spawn an enemy each frame
-        if random.random() < random_enemy_spawn_chance and len(enemies) < 5:  # Limit the number of enemies on screen
-            enemy_x = random.randint(200, SCREEN_WIDTH - 200 - 30)  # Enemy width is 30
-            enemy_y = random.randint(0, SCREEN_HEIGHT - 30)  # Enemy height is 30
+        random_enemy_spawn_chance = 0.015  # 1.5% chance to spawn an enemy each frame
+        if random.random() < random_enemy_spawn_chance and len(enemies) < 5:
+            spawn_location = random.choice(enemy_spawn_locations)
+            enemy_x = spawn_location[0]
+            enemy_y = spawn_location[1]
             enemies.append([enemy_x, enemy_y])
 
         enemy_movement ()
@@ -321,11 +358,14 @@ while running:
                     bullets.remove(bullet)
                     score += 1
                     
-            pygame.draw.rect(screen, BLACK, (enemy[0], enemy[1], 30, 30))
+            screen.blit(enemy_image, (enemy[0], enemy[1]))
+
+    if enemy_collision(player, enemies) == True:
+        player_x, player_y,lives = lose_life(player_x,player_y,lives,bullets, enemies)
 
     # ======== END ========
    
-    if score >= 5:
+    if score >= 10:
         won = True
         font = pygame.font.Font(None, 100)
         level_complete = font.render("You Completed This Level!", True, GREEN)
@@ -342,46 +382,76 @@ while running:
             player_y = 387
 
     if not lvl_2_won:
-            # Move left
-            if keys[pygame.K_a]:
-                player_x -= speed
-                player = pygame.Rect(player_x, player_y, player_size, player_size)
-                
-    
-            # Move right
-            if keys[pygame.K_d]:
+ # Move left
+        if keys[pygame.K_a]:
+            player_x -= speed
+            player = pygame.Rect(player_x, player_y, player_size, player_size)
+            if check_cacti_collision(player, cacti_borders) == True:
+                player_x, player_y,lives = lose_life(player_x,player_y,lives,bullets, enemies)
+            if check_border_collision(player, left_border, right_border) == True:
                 player_x += speed
-                player = pygame.Rect(player_x, player_y, player_size, player_size)
+            
+
+        # Move right
+        if keys[pygame.K_d]:
+            player_x += speed
+            player = pygame.Rect(player_x, player_y, player_size, player_size)
+            if check_cacti_collision(player, cacti_borders) == True:
+                player_x, player_y,lives = lose_life(player_x,player_y,lives,bullets, enemies)
+            if check_border_collision(player, left_border, right_border) == True:
+                player_x -= (speed)
+            
+        # Move up
+        if keys[pygame.K_w]:
+            player_y -= speed
+            player = pygame.Rect(player_x, player_y, player_size, player_size)
+            if check_cacti_collision(player, cacti_borders) == True:
+                player_x, player_y,lives = lose_life(player_x,player_y,lives,bullets, enemies)
+            if check_border_collision(player, left_border, right_border) == True:
+                player_y += (speed)
+                        
                 
-            # Move up
-            if keys[pygame.K_w]:
-                player_y -= speed
-                player = pygame.Rect(player_x, player_y, player_size, player_size)
-                
-                    
-            # Move down
-            if keys[pygame.K_s]:
-                player_y += speed
-                player = pygame.Rect(player_x, player_y, player_size, player_size)
+        # Move down
+        if keys[pygame.K_s]:
+            player_y += speed
+            player = pygame.Rect(player_x, player_y, player_size, player_size)
+            if check_cacti_collision(player, cacti_borders) == True:
+                player_x, player_y,lives = lose_life(player_x,player_y,lives,bullets, enemies)
+            if check_border_collision(player, left_border, right_border) == True:
+                player_y -= (speed)
+                        
+   
+   # Keep the player within the screen boundaries
+    if player_x < 200:
+        player_x = 200
+
+    if player_x > 1000 - player_size:
+        player_x = 1000 - player_size
+
+    if player_y < 0:
+        player_y = 0
+
+    if player_y > SCREEN_HEIGHT - player_size:
+        player_y = SCREEN_HEIGHT - player_size
+
+        # Update the player rectangle
+    player = pygame.Rect(player_x, player_y, player_size, player_size)
 
     if won == True and not lvl_2_won:
         for cacti in cacti_borders:
-            pygame.draw.polygon(screen, GREEN, cacti)
-        # Replace line 323 with a loop:
+                    pygame.draw.rect(screen, GREEN, cacti)
         for cactus in cacti_pillars:
             pygame.draw.rect(screen, GREEN, cactus)
         
         
-        #cacti_border_ctl = pygame.draw.rect(screen, GREEN, (400, 200, 80, 80))
-        #cacti_border_ctr = pygame.draw.rect(screen, GREEN, (720, 200, 80, 80))
-        #cacti_border_cbl = pygame.draw.rect(screen, GREEN, (400, 520, 80, 80))
-        #cacti_border_cbr = pygame.draw.rect(screen, GREEN, (720, 520, 80, 80))
+       
 
     if won == True and cont == True and not lvl_2_won:
-        random_enemy_spawn_chance = 0.01  # 1% chance to spawn an enemy each frame
-        if random.random() < random_enemy_spawn_chance and len(enemies) < 5:  # Limit the number of enemies on screen
-            enemy_x = random.randint(200, SCREEN_WIDTH - 200 - 30)  # Enemy width is 30
-            enemy_y = random.randint(0, SCREEN_HEIGHT - 30)  # Enemy height is 30
+        random_enemy_spawn_chance = 0.015  # 1.5% chance to spawn an enemy each frame
+        if random.random() < random_enemy_spawn_chance and len(enemies) < 5:
+            spawn_location = random.choice(enemy_spawn_locations)
+            enemy_x = spawn_location[0]
+            enemy_y = spawn_location[1]
             enemies.append([enemy_x, enemy_y])
     
         enemy_movement ()
