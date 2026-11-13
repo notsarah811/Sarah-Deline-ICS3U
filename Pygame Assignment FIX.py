@@ -38,6 +38,16 @@ last_bullet_time = 0
 
 #enemy stats
 enemy_speed = 2.5
+enemy_spawn_rate = 0.015
+
+#powerups
+selection = 0
+extra_life = 0
+coffee = 0
+slow = 0
+slowed = False
+
+powerup_spawn = 0.1
 
 #timer setup + game stats
 cont = False
@@ -48,6 +58,7 @@ won = False
 lvl_2_won = False
 clock = pygame.time.Clock()
 
+powerups = []
 cacti_borders = [
     (200, 0, 300, 50),
     (200, 0, 50, 300),
@@ -141,6 +152,7 @@ def enemy_collision(player, enemies): #collision detection function that checks 
             return True
     return False
 
+
 #==========GAME LOOP================
 while running:
     # Check for events
@@ -148,6 +160,34 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
+        if event.type == pygame.KEYDOWN:
+
+            # Select powerup
+            if event.key == pygame.K_1 and extra_life > 0:
+                selection = 1
+
+            elif event.key == pygame.K_2 and coffee > 0:
+                selection = 2
+
+            elif event.key == pygame.K_3 and slow > 0:
+                selection = 3
+
+            # Use selected powerup
+            elif event.key == pygame.K_SPACE:
+
+                if selection == 1 and extra_life > 0:
+                    extra_life -= 1
+                    lives += 1
+                    selection = 0
+
+                elif selection == 2 and coffee > 0:
+                    coffee -= 1
+                    selection = 0
+
+                elif selection == 3 and slow > 0:
+                    slow -= 1
+                    slowed = True
+                    selection = 0
     # Get the keys being pressed
     keys = pygame.key.get_pressed()
    
@@ -202,13 +242,16 @@ while running:
 
         # Update the player rectangle
    
+
+    
     player = pygame.Rect(player_x, player_y, player_size, player_size)
 
-    player_image = pygame.image.load("temp sprite.jpeg")
+    player_image = pygame.image.load("Character Sprite.png")
     enemy_image = pygame.image.load("temp sprite.jpeg")
     player_image = pygame.transform.scale(player_image, (player_size, player_size))
     enemy_image = pygame.transform.scale(enemy_image, (enemy_size, enemy_size))
 
+    
     #========== TIMER ================
     #https://www.youtube.com/watch?v=juSH7hmYUGA
     elapsed_time = time.time() - start_time
@@ -235,9 +278,23 @@ while running:
     text_score = font.render(f"Lives = {lives}", True, WHITE)
     screen.blit(text_score, (20, 100))
 
+    extra_lives_txt = font.render(f"Ex. Life = {extra_life}", True, RED if selection == 1 else WHITE)
+    coffee_txt = font.render(f"Coffee = {coffee}", True, RED if selection == 2 else WHITE)
+    slow_txt = font.render(f"Slow = {slow}", True, RED if selection == 3 else WHITE)
+
+    screen.blit(extra_lives_txt, (20, 200))
+    screen.blit(coffee_txt, (20, 250))
+    screen.blit(slow_txt, (20, 300))
+
     #Player Sprite
     player = pygame.Rect(player_x, player_y, player_size, player_size)
+    
     screen.blit(player_image, (player_x, player_y))
+
+
+   
+
+    
 
     #Timer Display
     timer = pygame.draw.rect(screen, RED, ( 295, 30, remaining_time * 10, 15))
@@ -333,9 +390,11 @@ while running:
 
     # ======== ENEMY SECTION ========
 
+    if remaining_time <= 30:
+        enemy_spawn_rate = 0.02
+
     if not won: #only spawns enemies if the player has not won yet
-        random_enemy_spawn_chance = 0.015  # 1.5% chance to spawn an enemy each frame
-        if random.random() < random_enemy_spawn_chance and len(enemies) < 5: #restricts the number of enemies on screen to 5
+        if random.random() < enemy_spawn_rate and len(enemies) < 5: #restricts the number of enemies on screen to 5
             spawn_location = random.choice(enemy_spawn_locations) #picks which side to spawn enemy at
             enemy_x = spawn_location[0]
             enemy_y = spawn_location[1]
@@ -347,6 +406,7 @@ while running:
         for enemy in enemies: #enemy + bullet collision
             enemy_rect = pygame.Rect(enemy[0], enemy[1], 30, 30) #creates hitbox for the enemy to check for collisions
 
+            
             for bullet in bullets: #creates hitbox for the bullet to check for collisions with the enemy
                 bullet_rect = pygame.Rect(bullet[0], bullet[1], 15, 15)
 
@@ -354,11 +414,51 @@ while running:
                     enemies.remove(enemy)
                     bullets.remove(bullet)
                     score += 1
+
+                    #powerup spawn
+                    if random.random() < powerup_spawn and len(powerups) <= 10:
+                        if random.randint(1,100) > 1 and random.randint(1,100) < 20 and len(powerups) <= 10:
+                            powerups.append([enemy[0], enemy[1], "extra_life"])
+                        if random.randint(1,100) > 20 and random.randint(1,100) < 60 and len(powerups) <= 10:
+                            powerups.append([enemy[0], enemy[1], "coffee"])
+                        if random.randint(1,100) > 60 and random.randint(1,100) < 100 and len(powerups) <= 10:
+                            powerups.append([enemy[0], enemy[1], "slow"])
                     
             screen.blit(enemy_image, (enemy[0], enemy[1]))
 
+
     if enemy_collision(player, enemies) == True: #enemy + player collision
         player_x, player_y,lives = lose_life(player_x,player_y,lives,bullets, enemies)
+    
+    #========== POWER-UPS ==========
+    
+    for powerup in powerups[:]: # Iterate over a copy of the list to avoid modifying it while iterating
+        powerup_rect = pygame.Rect(powerup[0], powerup[1], 20, 20)
+        # Draw powerup
+        pygame.draw.rect(screen, WHITE, powerup_rect)
+
+        # Check if player collects powerup
+        if player.colliderect(powerup_rect):
+            if powerup[2] == "extra_life":
+                extra_life += 1
+            elif powerup[2] == "coffee":
+                coffee += 1
+            elif powerup[2] == "slow":
+                slow += 1
+            powerups.remove(powerup)
+
+    if slowed == True:
+            for enemy in enemies:
+                tinted_sprite = enemy_image.copy()
+                tinted_sprite.fill((82, 105, 255, 100), special_flags=pygame.BLEND_RGBA_MULT)
+                screen.blit(tinted_sprite, (enemy[0], enemy[1]))
+
+                enemy_speed = 1.5
+                if time.time() - start_time >= 10:  # Check if 10 seconds have passed since the slow effect started
+                    slowed = False  # Reset the slowed state
+                    enemy_speed = 2.5  # Reset enemy speed to normal
+
+
 
     # ======== END ========
    
